@@ -767,7 +767,7 @@ template BacktrackingMatcher(bool CTregex)
 }
 
 //very shitty string formatter, $$ replaced with next argument converted to string
-@trusted string ctSub( U...)(string format, U args)
+string ctSub( U...)(string format, U args)
 {
     import std.conv : to;
     bool seenDollar;

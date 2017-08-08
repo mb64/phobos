@@ -12,8 +12,9 @@ import std.regex.internal.parser : Escapables; // characters that need escaping
 
 alias Sequence(int B, int E) = staticIota!(B, E);
 
+//sanity checks
 @safe unittest
-{//sanity checks
+{
     regex("(a|b)*");
     regex(`(?:([0-9A-F]+)\.\.([0-9A-F]+)|([0-9A-F]+))\s*;\s*(.*)\s*#`);
     regex("abc|edf|ighrg");
@@ -751,24 +752,29 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assert(equal(split(s1, regex(", *")), w1[]));
 }
 
+//bugzilla 7141
 @safe unittest
-{ // bugzilla 7141
+{
     string pattern = `[a\--b]`;
     assert(match("-", pattern));
     assert(match("b", pattern));
     string pattern2 = `[&-z]`;
     assert(match("b", pattern2));
 }
+
+//bugzilla 7111
 @safe unittest
-{//bugzilla 7111
+{
     assert(match("", regex("^")));
 }
+
+//bugzilla 7300
 @safe unittest
-{//bugzilla 7300
+{
     assert(!match("a"d, "aa"d));
 }
 
-// bugzilla 7551
+//bugzilla 7551
 @safe unittest
 {
     auto r = regex("[]abc]*");
@@ -778,14 +784,17 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assert("]ac".matchFirst(r2).hit == "]");
 }
 
+//bugzilla 7674
 @safe unittest
-{//bugzilla 7674
+{
     assert("1234".replace(regex("^"), "$$") == "$1234");
     assert("hello?".replace(regex(r"\?", "g"), r"\?") == r"hello\?");
     assert("hello?".replace(regex(r"\?", "g"), r"\\?") != r"hello\?");
 }
+
+//bugzilla 7679
 @safe unittest
-{// bugzilla 7679
+{
     import std.algorithm.comparison : equal;
     foreach (S; AliasSeq!(string, wstring, dstring))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
@@ -795,8 +804,10 @@ alias Sequence(int B, int E) = staticIota!(B, E);
         assert(split(str, re) == [to!S("a"), to!S("b")]);
     }();
 }
+
+//bugzilla 8203
 @safe unittest
-{//bugzilla 8203
+{
     string data = "
     NAME   = XPAW01_STA:STATION
     NAME   = XPAW01_STA
@@ -811,13 +822,15 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     auto r2 = regex(`([а-яА-Я\-_]+\s*)+(?<=[\s\.,\^])`);
     match("аллея Театральная", r2);
 }
+
+//bugzilla 8637 purity of enforce
 @safe unittest
-{// bugzilla 8637 purity of enforce
+{
     auto m = match("hello world", regex("world"));
     enforce(m);
 }
 
-// bugzilla 8725
+//bugzilla 8725
 @safe unittest
 {
   static italic = regex( r"\*
@@ -830,7 +843,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
       "this * is* interesting, <i>very</i> interesting");
 }
 
-// bugzilla 8349
+//bugzilla 8349
 @safe unittest
 {
     enum peakRegexStr = r"\>(wgEncode.*Tfbs.*\.(?:narrow)|(?:broad)Peak.gz)</a>";
@@ -839,7 +852,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assert(match(r"\>wgEncode-blah-Tfbs.narrow</a>", peakRegex));
 }
 
-// bugzilla 9211
+//bugzilla 9211
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -851,7 +864,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assert(equal(m2.front, ["1234", "3", "4"]));
 }
 
-// bugzilla 9280
+//bugzilla 9280
 @safe unittest
 {
     string tomatch = "a!b@c";
@@ -864,7 +877,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 }
 
 
-// bugzilla 9579
+//bugzilla 9579
 @safe unittest
 {
     char[] input = ['a', 'b', 'c'];
@@ -875,7 +888,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assert(r == "(a)bc");
 }
 
-// bugzilla 9634
+//bugzilla 9634
 @safe unittest
 {
     auto re = ctRegex!"(?:a+)";
@@ -891,7 +904,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assert(m.hit == "ab");
 }
 
-// bugzilla 10913
+//bugzilla 10913
 @system unittest
 {
     @system static string foo(const(char)[] s)
@@ -910,7 +923,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     }();
 }
 
-// bugzilla 11262
+//bugzilla 11262
 @safe unittest
 {
     enum reg = ctRegex!(r",", "g");
@@ -919,13 +932,13 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assert(str == "This-List");
 }
 
-// bugzilla 11775
+//bugzilla 11775
 @safe unittest
 {
     assert(collectException(regex("a{1,0}")));
 }
 
-// bugzilla 11839
+//bugzilla 11839
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -936,7 +949,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assert(regex(`(?P<я>\w+)`).namedCaptures.equal(["я"]));
 }
 
-// bugzilla 12076
+//bugzilla 12076
 @safe unittest
 {
     auto RE = ctRegex!(r"(?<!x[a-z]+)\s([a-z]+)");
@@ -944,7 +957,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     auto m = match(s, RE);
 }
 
-// bugzilla 12105
+//bugzilla 12105
 @safe unittest
 {
     auto r = ctRegex!`.*?(?!a)`;
@@ -968,14 +981,14 @@ alias Sequence(int B, int E) = staticIota!(B, E);
      assert(!"xxxx".match(re).empty);
 }
 
-// bugzilla 12582
+//bugzilla 12582
 @safe unittest
 {
     auto r = regex(`(?P<a>abc)`);
     assert(collectException("abc".matchFirst(r)["b"]));
 }
 
-// bugzilla 12691
+//bugzilla 12691
 @safe unittest
 {
     assert(bmatch("e@", "^([a-z]|)*$").empty);
@@ -996,14 +1009,14 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assertThrown(regex(`^((x)(?=\1))`));
 }
 
-// bugzilla 14504
+//bugzilla 14504
 @safe unittest
 {
     auto p = ctRegex!("a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?" ~
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 }
 
-// bugzilla 14529
+//bugzilla 14529
 @safe unittest
 {
     auto ctPat2 = regex(r"^[CDF]$", "i");
@@ -1011,7 +1024,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
         assert(matchAll(v, ctPat2).front.hit == v);
 }
 
-// bugzilla 14615
+//bugzilla 14615
 @safe unittest
 {
     import std.array : appender;
@@ -1030,14 +1043,14 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assert(sink.data == "Hello, world!Hello, world!");
 }
 
-// bugzilla 15573
+//bugzilla 15573
 @safe unittest
 {
     auto rx = regex("[c d]", "x");
     assert("a b".matchFirst(rx));
 }
 
-// bugzilla 15864
+//bugzilla 15864
 @safe unittest
 {
     regex(`(<a (?:(?:\w+=\"[^"]*\")?\s*)*href="\.\.?)"`);
@@ -1050,7 +1063,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assertThrown(regex("(?#..."));
 }
 
-// bugzilla 17075
+//bugzilla 17075
 @safe unittest
 {
     enum titlePattern = `<title>(.+)</title>`;
@@ -1059,14 +1072,14 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assert(input.matchFirst(titleRegex).empty);
 }
 
-// bugzilla 17212
+//bugzilla 17212
 @safe unittest
 {
     auto r = regex(" [a] ", "x");
     assert("a".matchFirst(r));
 }
 
-// bugzilla 17157
+//bugzilla 17157
 @safe unittest
 {
     import std.algorithm.comparison : equal;

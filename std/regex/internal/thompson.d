@@ -281,52 +281,52 @@ template ThompsonOps(E, S, bool withInput:true)
         with(e) with(state)
         {
             //len, step, min, max
-                uint len = re.ir[t.pc].data;
-                uint step =  re.ir[t.pc+2].raw;
-                uint min = re.ir[t.pc+3].raw;
-                if (t.counter < min)
+            uint len = re.ir[t.pc].data;
+            uint step =  re.ir[t.pc+2].raw;
+            uint min = re.ir[t.pc+3].raw;
+            if (t.counter < min)
+            {
+                t.counter += step;
+                t.pc -= len;
+                return true;
+            }
+            if (merge[re.ir[t.pc + 1].raw+t.counter] < genCounter)
+            {
+                debug(std_regex_matcher) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
+                                t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                merge[re.ir[t.pc + 1].raw+t.counter] = genCounter;
+            }
+            else
+            {
+                debug(std_regex_matcher)
+                    writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
+                        t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                return popState(e);
+            }
+            uint max = re.ir[t.pc+4].raw;
+            if (t.counter < max)
+            {
+                if (re.ir[t.pc].code == IR.RepeatEnd)
                 {
+                    //queue out-of-loop thread
+                    worklist.insertFront(fork(t, t.pc + IRL!(IR.RepeatEnd),  t.counter % step));
                     t.counter += step;
                     t.pc -= len;
-                    return true;
-                }
-                if (merge[re.ir[t.pc + 1].raw+t.counter] < genCounter)
-                {
-                    debug(std_regex_matcher) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
-                                    t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
-                    merge[re.ir[t.pc + 1].raw+t.counter] = genCounter;
                 }
                 else
                 {
-                    debug(std_regex_matcher)
-                        writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
-                            t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
-                    return popState(e);
-                }
-                uint max = re.ir[t.pc+4].raw;
-                if (t.counter < max)
-                {
-                    if (re.ir[t.pc].code == IR.RepeatEnd)
-                    {
-                        //queue out-of-loop thread
-                        worklist.insertFront(fork(t, t.pc + IRL!(IR.RepeatEnd),  t.counter % step));
-                        t.counter += step;
-                        t.pc -= len;
-                    }
-                    else
-                    {
-                        //queue into-loop thread
-                        worklist.insertFront(fork(t, t.pc - len,  t.counter + step));
-                        t.counter %= step;
-                        t.pc += IRL!(IR.RepeatEnd);
-                    }
-                }
-                else
-                {
+                    //queue into-loop thread
+                    worklist.insertFront(fork(t, t.pc - len,  t.counter + step));
                     t.counter %= step;
                     t.pc += IRL!(IR.RepeatEnd);
                 }
-                return true;
+            }
+            else
+            {
+                t.counter %= step;
+                t.pc += IRL!(IR.RepeatEnd);
+            }
+            return true;
         }
     }
 
@@ -570,12 +570,12 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-                finish(t, matches.ptr[0 .. re.ngroup], re.ir[t.pc].data);
-                recycle(t);
-                //cut off low priority threads
-                recycle(clist);
-                recycle(worklist);
-                return false; // no more state
+            finish(t, matches.ptr[0 .. re.ngroup], re.ir[t.pc].data);
+            recycle(t);
+            //cut off low priority threads
+            recycle(clist);
+            recycle(worklist);
+            return false; // no more state
         }
     }
 
@@ -617,7 +617,9 @@ template ThompsonOps(E, S, bool withInput:true)
                 nlist.insertBack(t);
             }
             else
+            {
                 recycle(t);
+            }
             t = worklist.fetch();
             return t != null;
         }
@@ -759,9 +761,7 @@ if (is(Char : dchar))
     }
 
     static if (__traits(hasMember,Stream, "search"))
-    {
         enum kicked = true;
-    }
     else
         enum kicked = false;
 
@@ -830,10 +830,10 @@ if (is(Char : dchar))
                 foreach (e; __traits(allMembers, IR))
                 {
             mixin(`case IR.`~e~`:
-                    opCacheTrue[pc] = &Ops!(true).op!(IR.`~e~`);
-                    opCacheBackTrue[pc] = &BackOps!(true).op!(IR.`~e~`);
-                    opCacheFalse[pc] = &Ops!(false).op!(IR.`~e~`);
-                    opCacheBackFalse[pc] = &BackOps!(false).op!(IR.`~e~`);
+                opCacheTrue[pc] = &Ops!(true).op!(IR.`~e~`);
+                opCacheBackTrue[pc] = &BackOps!(true).op!(IR.`~e~`);
+                opCacheFalse[pc] = &Ops!(false).op!(IR.`~e~`);
+                opCacheBackFalse[pc] = &BackOps!(false).op!(IR.`~e~`);
                 break L_dispatch;
                 `);
                 }
@@ -912,9 +912,7 @@ if (is(Char : dchar))
         debug(std_regex_matcher)
             writeln("------------------------------------------");
         if (exhausted)
-        {
             return false;
-        }
         if (re.flags & RegexInfo.oneShot)
         {
             next();

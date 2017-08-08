@@ -234,21 +234,18 @@ struct Bytecode
     }
 
     //bit twiddling helpers
-    //0-arg template due to @@@BUG@@@ 10985
-    @property uint data()() const { return raw & 0x003f_ffff; }
+    @property uint data() const { return raw & 0x003f_ffff; }
 
-    @property void data()(uint val)
+    @property void data(uint val)
     {
         raw = (raw & ~0x003f_ffff) | (val & 0x003f_ffff);
     }
 
     //ditto
-    //0-arg template due to @@@BUG@@@ 10985
-    @property uint sequence()() const { return 2 + (raw >> 22 & 0x3); }
+    @property uint sequence() const { return 2 + (raw >> 22 & 0x3); }
 
     //ditto
-    //0-arg template due to @@@BUG@@@ 10985
-    @property IR code()() const { return cast(IR)(raw >> 24); }
+    @property IR code() const { return cast(IR)(raw >> 24); }
 
     //ditto
     @property bool hotspot() const { return hasMerge(code); }
@@ -294,8 +291,8 @@ struct Bytecode
     }
 
     //human readable name of instruction
-    @trusted @property string mnemonic()() const
-    {//@@@BUG@@@ to is @system
+    @property string mnemonic() const
+    {
         import std.conv : to;
         return to!string(code);
     }
@@ -341,7 +338,7 @@ struct NamedGroup
 struct Group(DataIndex)
 {
     DataIndex begin, end;
-    @trusted string toString()() const
+    string toString() const
     {
         import std.array : appender;
         import std.format : formattedWrite;
@@ -416,7 +413,7 @@ struct Group(DataIndex)
 }
 
 //disassemble the whole chunk
-@trusted void printBytecode()(in Bytecode[] slice, in NamedGroup[] dict=[])
+void printBytecode(in Bytecode[] slice, in NamedGroup[] dict=[])
 {
     import std.stdio : writeln;
     for (uint pc=0; pc<slice.length; pc += slice[pc].length)
@@ -467,7 +464,7 @@ struct Regex(Char)
             }
             void popFront() { assert(!empty); start++; }
             void popBack() { assert(!empty); end--; }
-            string opIndex()(size_t i)
+            string opIndex(size_t i)
             {
                 assert(start + i < end,
                        "Requested named group is out of range.");
@@ -525,8 +522,8 @@ package(std.regex):
     }
 
     //print out disassembly a program's IR
-    @trusted debug(std_regex_parser) void print() const
-    {//@@@BUG@@@ write is system
+    debug(std_regex_parser) void print() const
+    {
         for (uint i = 0; i < ir.length; i += ir[i].length)
         {
             writefln("%d\t%s ", i, disassemble(ir, i, dict));
@@ -534,11 +531,10 @@ package(std.regex):
         writeln("Total merge table size: ", hotspotTableSize);
         writeln("Max counter nesting depth: ", maxCounterDepth);
     }
-
 }
 
 //@@@BUG@@@ (unreduced) - public makes it inaccessible in std.regex.package (!)
-/*public*/ struct StaticRegex(Char)
+public struct StaticRegex(Char)
 {
 package(std.regex):
     import std.regex.internal.backtracking : BacktrackingMatcher;
@@ -552,9 +548,7 @@ public:
     {
         _regex = re;
         nativeFn = fn;
-
     }
-
 }
 
 // The stuff below this point is temporarrily part of IR module
@@ -624,7 +618,7 @@ struct BackLooperImpl(Input)
         _origin = input._origin;
         _index = index;
     }
-    @trusted bool nextChar(ref dchar res,ref size_t pos)
+    bool nextChar(ref dchar res,ref size_t pos)
     {
         pos = _index;
         if (_index == 0)
@@ -676,8 +670,8 @@ template BackLooper(E)
 }
 
 //
-@trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
-{//equal is @system?
+uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
+{
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
     import std.conv : text;
@@ -690,16 +684,14 @@ template BackLooper(E)
 }
 
 //whether ch is one of unicode newline sequences
-//0-arg template due to @@@BUG@@@ 10985
-bool endOfLine()(dchar front, bool seenCr)
+bool endOfLine(dchar front, bool seenCr)
 {
     return ((front == '\n') ^ seenCr) || front == '\r'
     || front == NEL || front == LS || front == PS;
 }
 
 //
-//0-arg template due to @@@BUG@@@ 10985
-bool startOfLine()(dchar back, bool seenNl)
+bool startOfLine(dchar back, bool seenNl)
 {
     return ((back == '\r') ^ seenNl) || back == '\n'
     || back == NEL || back == LS || back == PS;
@@ -723,17 +715,17 @@ struct BitTable {
         }
     }
 
-    void add()(dchar ch){
+    void add(dchar ch){
         immutable i = index(ch);
         filter[i >> 5]  |=  1<<(i & 31);
     }
     // non-zero -> might be present, 0 -> absent
-    bool opIndex()(dchar ch) const{
+    bool opIndex(dchar ch) const{
         immutable i = index(ch);
         return (filter[i >> 5]>>(i & 31)) & 1;
     }
 
-    static uint index()(dchar ch){
+    static uint index(dchar ch){
         return ((ch >> 7) ^ ch) & 0x7F;
     }
 }
@@ -749,7 +741,7 @@ struct CharMatcher {
         trie = makeTrie(set);
     }
 
-    bool opIndex()(dchar ch) const
+    bool opIndex(dchar ch) const
     {
         if (ch < 0x80)
             return ascii[ch];

@@ -10,7 +10,7 @@ module std.regex.internal.generator;
     that _have_ to match given compiled regex.
     Caveats: supports only a simple subset of bytecode.
 */
-@trusted private struct SampleGenerator(Char)
+private struct SampleGenerator(Char)
 {
     import std.array : appender, Appender;
     import std.format : formattedWrite;
@@ -181,7 +181,6 @@ module std.regex.internal.generator;
     auto re = regex(`P[a-z]{3,}q`);
     auto gen = SampleGenerator!char(re, 20, 3141592);
     static assert(isInputRange!(typeof(gen)));
-    //@@@BUG@@@ somehow gen.take(1_000) doesn't work
-    foreach (v; take(gen, 1_000))
+    foreach (v; gen.take(1_000))
         assert(v.match(re));
 }

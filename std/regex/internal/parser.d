@@ -10,7 +10,7 @@ import std.range.primitives, std.uni, std.meta,
 import std.regex.internal.ir;
 
 // package relevant info from parser into a regex object
-auto makeRegex(S, CG)(Parser!(S, CG) p)
+@trusted auto makeRegex(S, CG)(Parser!(S, CG) p)
 {
     Regex!(BasicElementOf!S) re;
     auto g = p.g;
@@ -43,7 +43,7 @@ if (isSomeString!S)
     return makeRegex(Parser!(S, CodeGen)(arg, ""));
 }
 
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     auto re = makeRegex(`(?P<name>\w+) = (?P<var>\d+)`);
@@ -88,7 +88,7 @@ if (isSomeString!S)
     {
         for (uint pc = start; pc < end; )
         {
-            immutable len = code[pc].length;
+            const len = code[pc].length;
             if (code[pc].code == IR.GotoEndOr)
                 break; //pick next alternation branch
             if (code[pc].isAtom)
@@ -103,21 +103,21 @@ if (isSomeString!S)
                 if (code[pc].code == IR.LookbehindStart
                     || code[pc].code == IR.NeglookbehindStart)
                 {
-                    immutable blockLen = len + code[pc].data
+                    const blockLen = len + code[pc].data
                          + code[pc].pairedLength;
                     rev[revPc - blockLen .. revPc] = code[pc .. pc + blockLen];
                     pc += blockLen;
                     revPc -= blockLen;
                     continue;
                 }
-                immutable second = code[pc].indexOfPair(pc);
-                immutable secLen = code[second].length;
+                const second = code[pc].indexOfPair(pc);
+                const secLen = code[second].length;
                 rev[revPc - secLen .. revPc] = code[second .. second + secLen];
                 revPc -= secLen;
                 if (code[pc].code == IR.OrStart)
                 {
                     //we pass len bytes forward, but secLen in reverse
-                    immutable revStart = revPc - (second + len - secLen - pc);
+                    const revStart = revPc - (second + len - secLen - pc);
                     uint r = revStart;
                     uint i = pc + IRL!(IR.OrStart);
                     while (code[i].code == IR.Option)
@@ -211,8 +211,8 @@ struct CodeGen
     }
 
     //try to generate optimal IR code for this CodepointSet
-    @trusted void charsetToIr(CodepointSet set)
-    {//@@@BUG@@@ writeln is @system
+    void charsetToIr(CodepointSet set)
+    {
         uint chars = cast(uint) set.length;
         if (chars < Bytecode.maxSequence)
         {
@@ -232,7 +232,7 @@ struct CodeGen
         {
             import std.algorithm.searching : countUntil;
             const ivals = set.byInterval;
-            immutable n = charsets.countUntil(set);
+            const n = charsets.countUntil(set);
             if (n >= 0)
             {
                 if (ivals.length*2 > maxCharsetUsed)
@@ -269,7 +269,7 @@ struct CodeGen
     {
         nesting++;
         pushFixup(length);
-        immutable nglob = groupStack.top++;
+        const nglob = groupStack.top++;
         enforce(groupStack.top <= maxGroupNumber, "limit on number of submatches is exceeded");
         put(Bytecode(IR.GroupStart, nglob));
     }
@@ -334,7 +334,7 @@ struct CodeGen
     void fixRepetition(uint offset)
     {
         import std.algorithm.mutation : copy;
-        immutable replace = ir[offset].code == IR.Nop;
+        const replace = ir[offset].code == IR.Nop;
         if (replace)
         {
             copy(ir[offset + 1 .. $], ir[offset .. $ - 1]);
@@ -590,8 +590,8 @@ if (isForwardRange!R && is(ElementType!R : dchar))
     }
 
     //
-    @trusted void parseFlags(S)(S flags)
-    {//@@@BUG@@@ text is @system
+    void parseFlags(S)(S flags)
+    {
         import std.conv : text;
         foreach (ch; flags)//flags are ASCII anyway
         {
@@ -747,7 +747,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
                 g.fixAlternation();
                 break;
             default://no groups or whatever
-                immutable start = g.length;
+                const start = g.length;
                 parseAtom();
                 parseQuantifier(start);
             }
@@ -763,8 +763,8 @@ if (isForwardRange!R && is(ElementType!R : dchar))
 
 
     //parse and store IR for atom-quantifier pair
-    @trusted void parseQuantifier(uint offset)
-    {//copy is @system
+    void parseQuantifier(uint offset)
+    {
         if (empty)
             return g.fixRepetition(offset);
         uint min, max;
@@ -892,8 +892,8 @@ if (isForwardRange!R && is(ElementType!R : dchar))
     }
 
     //parse and generate IR for escape stand alone escape sequence
-    @trusted void parseEscape()
-    {//accesses array of appender
+    void parseEscape()
+    {
         import std.algorithm.iteration : sum;
         switch (front)
         {
@@ -955,7 +955,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
             break;
         case '1': .. case '9':
             uint nref = cast(uint) front - '0';
-            immutable maxBackref = sum(g.groupStack.data);
+            const maxBackref = sum(g.groupStack.data);
             enforce(nref < maxBackref, "Backref to unseen group");
             //perl's disambiguation rule i.e.
             //get next digit only if there is such group number
@@ -991,7 +991,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
     }
 
     //
-    @trusted void error(string msg)
+    void error(string msg)
     {
         import std.array : appender;
         import std.format : formattedWrite;
@@ -1012,8 +1012,8 @@ if (isForwardRange!R && is(ElementType!R : dchar))
 /+
     Postproces the IR, then optimize.
 +/
-@trusted void postprocess(Char)(ref Regex!Char zis)
-{//@@@BUG@@@ write is @system
+void postprocess(Char)(ref Regex!Char zis)
+{
     with(zis)
     {
         struct FixedStack(T)
@@ -1043,7 +1043,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
             case IR.RepeatStart, IR.RepeatQStart:
                 uint repEnd = cast(uint)(i + ir[i].data + IRL!(IR.RepeatStart));
                 assert(ir[repEnd].code == ir[i].paired.code);
-                immutable max = ir[repEnd + 4].raw;
+                const max = ir[repEnd + 4].raw;
                 ir[repEnd+2].raw = counterRange.top;
                 ir[repEnd+3].raw *= counterRange.top;
                 ir[repEnd+4].raw *= counterRange.top;
@@ -1172,8 +1172,8 @@ void optimize(Char)(ref Regex!Char zis)
 }
 
 //IR code validator - proper nesting, illegal instructions, etc.
-@trusted void validateRe(Char)(ref Regex!Char zis)
-{//@@@BUG@@@ text is @system
+void validateRe(Char)(ref Regex!Char zis)
+{
     import std.conv : text;
     with(zis)
     {
@@ -1181,7 +1181,7 @@ void optimize(Char)(ref Regex!Char zis)
         {
             if (ir[pc].isStart || ir[pc].isEnd)
             {
-                immutable dest = ir[pc].indexOfPair(pc);
+                const dest = ir[pc].indexOfPair(pc);
                 assert(dest < ir.length, text("Wrong length in opcode at pc=",
                     pc, " ", dest, " vs ", ir.length));
                 assert(ir[dest].paired ==  ir[pc],

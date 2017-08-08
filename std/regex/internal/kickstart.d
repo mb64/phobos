@@ -111,7 +111,7 @@ private:
         return nt;
     }
 
-    @trusted static ShiftThread fetch(ref ShiftThread[] worklist)
+    static ShiftThread fetch(ref ShiftThread[] worklist)
     {
         auto t = worklist[$-1];
         worklist.length -= 1;
@@ -127,7 +127,7 @@ private:
     }
 
 public:
-    @trusted this(ref Regex!Char re, uint[] memory)
+    this(ref Regex!Char re, uint[] memory)
     {
         static import std.algorithm.comparison;
         import std.algorithm.searching : countUntil;
@@ -190,7 +190,7 @@ public:
                 case IR.Char:
                     uint s = charLen(re.ir[t.pc].data);
                     if (t.idx+s > n_length)
-                        goto L_StopThread;
+                        goto default;
                     t.add(re.ir[t.pc].data);
                     t.advance(s);
                     t.pc += IRL!(IR.Char);
@@ -222,7 +222,7 @@ public:
                     if (!trs.empty)
                         t = fetch(trs);
                     else
-                        goto L_StopThread;
+                        goto default;
                     break;
                 case IR.CodepointSet:
                 case IR.Trie:
@@ -258,10 +258,10 @@ public:
                         }
                     }
                     if (numS == 0 || t.idx + s[numS-1] > n_length)
-                        goto L_StopThread;
+                        goto default;
                     auto  chars = set.length;
                     if (chars > charsetThreshold)
-                        goto L_StopThread;
+                        goto default;
                     foreach (ch; set.byCodepoint)
                     {
                         //avoid surrogate pairs
@@ -278,10 +278,10 @@ public:
                     if (!trs.empty)
                         t = fetch(trs);
                     else
-                        goto L_StopThread;
+                        goto default;
                     break;
                 case IR.Any:
-                    goto L_StopThread;
+                    goto default;
 
                 case IR.GotoEndOr:
                     t.pc += IRL!(IR.GotoEndOr)+re.ir[t.pc].data;
@@ -291,7 +291,7 @@ public:
                     auto slot = re.ir[t.pc+1].raw+t.counter;
                     auto val = hash(t.tab);
                     if (val in merge[slot])
-                        goto L_StopThread; // merge equivalent
+                        goto default; // merge equivalent
                     merge[slot][val] = true;
                     t.pc += IRL!(IR.OrEnd);
                     break;
@@ -315,7 +315,7 @@ public:
                     auto slot = re.ir[t.pc+1].raw+t.counter;
                     auto val = hash(t.tab);
                     if (val in merge[slot])
-                        goto L_StopThread; // merge equivalent
+                        goto default; // merge equivalent
                     merge[slot][val] = true;
                     uint len = re.ir[t.pc].data;
                     uint step = re.ir[t.pc+2].raw;
@@ -347,12 +347,12 @@ public:
                     auto slot = re.ir[t.pc+1].raw+t.counter;
                     auto val = hash(t.tab);
                     if (val in merge[slot])
-                        goto L_StopThread; // merge equivalent
+                        goto default; // merge equivalent
                     merge[slot][val] = true;
                     uint len = re.ir[t.pc].data;
                     uint pc1, pc2; //branches to take in priority order
                     if (++t.hops == 32)
-                        goto L_StopThread;
+                        goto default;
                     pc1 = t.pc + IRL!(IR.InfiniteEnd);
                     pc2 = t.pc - len;
                     trs ~= fork(t, pc2, t.counter);
@@ -368,7 +368,6 @@ public:
                     t.pc += IRL!(IR.LookaheadStart) + IRL!(IR.LookaheadEnd) + re.ir[t.pc].data;
                     break;
                 default:
-                L_StopThread:
                     assert(re.ir[t.pc].code >= 0x80, text(re.ir[t.pc].code));
                     debug (fred_search) writeln("ShiftOr stumbled on ",re.ir[t.pc].mnemonic);
                     n_length = std.algorithm.comparison.min(t.idx, n_length);
@@ -502,8 +501,8 @@ public:
         return haystack.length;
     }
 
-    @system debug static void dump(uint[] table)
-    {//@@@BUG@@@ writef(ln) is @system
+    debug static void dump(uint[] table)
+    {
         import std.stdio : writefln;
         for (size_t i = 0; i < table.length; i += 4)
         {
@@ -515,7 +514,7 @@ public:
 @system unittest
 {
     import std.conv, std.regex;
-    @trusted void test_fixed(alias Kick)()
+    void test_fixed(alias Kick)()
     {
         foreach (i, v; AliasSeq!(char, wchar, dchar))
         {
@@ -541,7 +540,7 @@ public:
             assert(x == 8, text(Kick.stringof,v.stringof," == ", kick.length));
         }
     }
-    @trusted void test_flex(alias Kick)()
+    void test_flex(alias Kick)()
     {
         foreach (i, v; AliasSeq!(char, wchar, dchar))
         {
